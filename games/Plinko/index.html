@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Plinko</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #0D1117;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 2rem;
+            touch-action: manipulation;
+            opacity: 0;
+            animation: fadeIn 1s forwards;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Canvas for stars background */
+        #stars-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* Canvas for fireworks */
+        #fireworks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .header {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            opacity: 0;
+            animation: fadeInUp 1s 0.3s forwards;
+            z-index: 1;
+        }
+
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-img {
+            height: 2rem;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .switch-button, .language-select {
+            background-color: #1D90F5;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background-color 0.3s;
+        }
+
+        .language-select {
+            margin-left: 5px;
+        }
+
+        .switch-button {
+            margin-right: 5px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            opacity: 0;
+            animation: fadeInUp 1s 0.6s forwards;
+            z-index: 1;
+            position: relative;
+        }
+
+        .center-number {
+            font-size: 4rem;
+            color: white;
+            margin: 2rem 0;
+            text-align: center;
+            position: relative;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .number-animation {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4rem;
+            color: #1E90FF;
+            font-weight: bold;
+            animation: spinIn 1.5s ease-out;
+        }
+        
+        .maxwin-animation {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 4rem;
+            color: gold;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255,215,0,0.7);
+            opacity: 0;
+            animation: maxwinAppear 2s forwards;
+        }
+        
+        @keyframes maxwinAppear {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            20% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+            40% { transform: translateX(-50%) scale(0.9); }
+            60% { transform: translateX(-50%) scale(1.1); }
+            80% { transform: translateX(-50%) scale(0.95); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+
+        @keyframes spinIn {
+            0% { transform: translateX(-50%) rotate(360deg); opacity: 0; }
+            100% { transform: translateX(-50%) rotate(0deg); opacity: 1; }
+        }
+
+        .message {
+            font-size: 1.2rem;
+            color: white;
+            margin: 1rem 0;
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.5s;
+        }
+
+        .controls {
+            background-color: rgba(26, 31, 37, 0.8);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            width: 100%;
+            margin-top: 1rem;
+            opacity: 0;
+            animation: fadeInUp 1s 0.9s forwards;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .row-controls, .difficulty-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .arrow {
+            color: white;
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: opacity 0.3s;
+        }
+
+        .row-count, .difficulty-level {
+            text-align: center;
+            color: white;
+        }
+
+        .row-number, .difficulty-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .row-text, .difficulty-subtext {
+            color: #999;
+            font-size: 0.875rem;
+        }
+
+        .play-button {
+            width: 100%;
+            background-color: #1D90F5;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        /* New Back Button Styling */
+        #backButton {
+            background: linear-gradient(93.73deg, #e75410, #c40e08);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            height: 42px;
+            width: 100%;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        #backButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 0.5rem;
+            }
+
+            .controls {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="stars-canvas"></canvas>
+    <canvas id="fireworks-canvas"></canvas>
+    
+    <div class="header">
+        <img src="images/logo.svg" alt="1Win" class="logo-img" id="logo">
+        <select class="language-select" id="languageSelect">
+            <option value="en">EN</option>
+            <option value="ru">RU</option>
+            <option value="hi">HI</option>
+            <option value="es">ES</option>
+            <option value="pt">PT</option>
+            <option value="br">BR</option>
+            <option value="tr">TR</option>
+            <option value="uz">UZ</option>
+            <option value="fr">FR</option>
+            <option value="ar">AR</option>
+        </select>
+        <button class="switch-button" onclick="window.location.href='https://1wtxpx.top/casino/play/1play_1play_instantplinko?sub1='">
+            🎰GAME HERE🎰
+          </button>
+    </div>
+
+    <div class="game-container">
+        <div class="center-number" id="centerNumber">
+            <div class="message" id="message" data-translate="maxXMessage">Remaining to max X:</div>
+            <div class="number-animation" id="numberAnimation"></div>
+        </div>
+
+        <div class="controls">
+            <div class="row-controls">
+                <button class="arrow" onclick="decrementRows()">&lt;</button>
+                <div class="row-count">
+                    <div class="row-number" id="rowCount">8</div>
+                    <div class="row-text" id="rowText" data-translate="rows">rows</div>
+                </div>
+                <button class="arrow" onclick="incrementRows()">&gt;</button>
+            </div>
+
+            <div class="difficulty-controls">
+                <button class="arrow" onclick="decrementDifficulty()">&lt;</button>
+                <div class="difficulty-level">
+                    <div class="difficulty-text" id="difficultyText" data-translate="low">Low</div>
+                    <div class="difficulty-subtext" id="difficultySubtext" data-translate="difficulty">difficulty</div>
+                </div>
+                <button class="arrow" onclick="incrementDifficulty()">&gt;</button>
+            </div>
+
+            <button class="play-button" onclick="startGame()" id="playButton" data-translate="play">Play</button>
+            <button id="backButton" type="button" onclick="window.history.back()" data-translate="back">Back</button>
+        </div>
+    </div>
+
+    <script>
+        const IMAGES = {
+            logo: 'images/logo.svg'
+        };
+
+        const translations = {
+            en: {
+                rows: "rows",
+                difficulty: "difficulty",
+                play: "Play",
+                back: "Back",
+                maxXMessage: "Remaining to max X:",
+                low: "Low",
+                medium: "Medium",
+                extreme: "Extreme",
+                maxwin: "MAXWIN"
+            },
+            ru: {
+                rows: "ряды",
+                difficulty: "сложность",
+                play: "Играть",
+                back: "Назад",
+                maxXMessage: "До максимального X осталось:",
+                low: "Низкая",
+                medium: "Средняя",
+                extreme: "Экстремальная",
+                maxwin: "MAXWIN"
+            },
+            hi: {
+                rows: "पंक्तियाँ",
+                difficulty: "कठिनाई",
+                play: "खेलें",
+                back: "वापस",
+                maxXMessage: "अधिकतम X शेष:",
+                low: "कम",
+                medium: "मध्यम",
+                extreme: "उच्च",
+                maxwin: "MAXWIN"
+            },
+            es: {
+                rows: "filas",
+                difficulty: "dificultad",
+                play: "Jugar",
+                back: "Atrás",
+                maxXMessage: "Restante para el X máximo:",
+                low: "Baja",
+                medium: "Media",
+                extreme: "Extrema",
+                maxwin: "MAXWIN"
+            },
+            pt: {
+                rows: "linhas",
+                difficulty: "dificuldade",
+                play: "Jogar",
+                back: "Voltar",
+                maxXMessage: "Restante para o X máximo:",
+                low: "Baixa",
+                medium: "Média",
+                extreme: "Extrema",
+                maxwin: "MAXWIN"
+            },
+            br: {
+                rows: "linhas",
+                difficulty: "dificuldade",
+                play: "Jogar",
+                back: "Voltar",
+                maxXMessage: "Restante para o X máximo:",
+                low: "Baixa",
+                medium: "Média",
+                extreme: "Extrema",
+                maxwin: "MAXWIN"
+            },
+            tr: {
+                rows: "satırlar",
+                difficulty: "zorluk",
+                play: "Oyna",
+                back: "Geri",
+                maxXMessage: "Maksimum X'e kalan:",
+                low: "Düşük",
+                medium: "Orta",
+                extreme: "Ekstrem",
+                maxwin: "MAXWIN"
+            },
+            uz: {
+                rows: "qatorlar",
+                difficulty: "qiyinchilik",
+                play: "O'ynash",
+                back: "Orqaga",
+                maxXMessage: "Maksimal X gacha qoldi:",
+                low: "Past",
+                medium: "O'rta",
+                extreme: "Ekstremal",
+                maxwin: "MAXWIN"
+            },
+            fr: {
+                rows: "rangées",
+                difficulty: "difficulté",
+                play: "Jouer",
+                back: "Retour",
+                maxXMessage: "Restant jusqu'au X maximum:",
+                low: "Faible",
+                medium: "Moyenne",
+                extreme: "Extrême",
+                maxwin: "MAXWIN"
+            },
+            ar: {
+                rows: "صفوف",
+                difficulty: "صعوبة",
+                play: "العب",
+                back: "رجوع",
+                maxXMessage: "المتبقي للوصول إلى الحد الأقصى X:",
+                low: "منخفضة",
+                medium: "متوسطة",
+                extreme: "قصوى",
+                maxwin: "MAXWIN"
+            }
+        };
+
+        let rowCount = 8;
+        let difficulty = 'low';
+        let currentLanguage = 'en';
+        let isGameStarted = false;
+        let countdownInterval;
+        let playButton;
+
+        // Fireworks animation
+        class Firework {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                
+                this.particles = [];
+                this.numberOfParticles = 50;
+                this.colors = ['#FF5252', '#FFD740', '#40C4FF', '#69F0AE', '#FF4081'];
+                
+                this.init();
+            }
+            
+            init() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                
+                window.addEventListener('resize', () => {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                });
+            }
+            
+            createParticles(x, y) {
+                for (let i = 0; i < this.numberOfParticles; i++) {
+                    const particle = {
+                        x: x,
+                        y: y,
+                        color: this.colors[Math.floor(Math.random() * this.colors.length)],
+                        radius: Math.random() * 3 + 1,
+                        velocity: {
+                            x: (Math.random() - 0.5) * 8,
+                            y: (Math.random() - 0.5) * 8
+                        },
+                        alpha: 1,
+                        decay: 0.015 + Math.random() * 0.01
+                    };
+                    
+                    this.particles.push(particle);
+                }
+            }
+            
+            update() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                for (let i = 0; i < this.particles.length; i++) {
+                    const p = this.particles[i];
+                    
+                    p.velocity.y += 0.05; // gravity
+                    p.x += p.velocity.x;
+                    p.y += p.velocity.y;
+                    p.alpha -= p.decay;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2, false);
+                    this.ctx.fillStyle = `rgba(${this.hexToRgb(p.color)}, ${p.alpha})`;
+                    this.ctx.fill();
+                    
+                    // Remove particles when they fade out
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                if (this.particles.length > 0) {
+                    requestAnimationFrame(this.update.bind(this));
+                }
+            }
+            
+            hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? 
+                    `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+                    '255, 255, 255';
+            }
+            
+            start() {
+                // Create multiple fireworks
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const x = Math.random() * this.canvas.width;
+                        const y = Math.random() * (this.canvas.height * 0.6);
+                        this.createParticles(x, y);
+                        
+                        if (i === 0) {
+                            this.update();
+                        }
+                    }, i * 300);
+                }
+            }
+        }
+
+        // Stars background animation
+        function initStarsBackground() {
+            const canvas = document.getElementById('stars-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas dimensions
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Star properties
+            const stars = [];
+            const numStars = 100;
+            const maxSize = 2;
+            
+            // Initialize stars
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * maxSize,
+                    speed: 0.1 + Math.random() * 0.3,
+                    brightness: 0.2 + Math.random() * 0.8
+                });
+            }
+            
+            // Animation function
+            function animateStars() {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw stars
+                for (let i = 0; i < stars.length; i++) {
+                    const star = stars[i];
+                    
+                    // Make star twinkle
+                    const brightness = star.brightness * (0.5 + Math.sin(Date.now() * 0.001 * star.speed) * 0.5);
+                    
+                    // Draw star
+                    ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Move star
+                    star.y += star.speed;
+                    
+                    // Reset star if it goes off screen
+                    if (star.y > canvas.height) {
+                        star.y = 0;
+                        star.x = Math.random() * canvas.width;
+                    }
+                }
+                
+                // Request next frame
+                requestAnimationFrame(animateStars);
+            }
+            
+            // Start animation
+            animateStars();
+            
+            // Resize canvas when window is resized
+            window.addEventListener('resize', function() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        function setLanguage() {
+            const languageSelect = document.getElementById('languageSelect');
+            currentLanguage = languageSelect.value; // Set initial language
+            
+            languageSelect.addEventListener('change', function () {
+                currentLanguage = languageSelect.value;
+                updateLanguage();
+            });
+
+            updateLanguage();
+        }
+
+        function updateLanguage() {
+            const elementsToUpdate = document.querySelectorAll('[data-translate]');
+            elementsToUpdate.forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[currentLanguage] && translations[currentLanguage][key]) {
+                    element.innerText = translations[currentLanguage][key];
+                }
+            });
+
+            // Update difficulty text based on current setting
+            document.getElementById('difficultyText').innerText = 
+                translations[currentLanguage][difficulty] || translations['en'][difficulty];
+
+            if (isGameStarted) {
+                document.getElementById('message').style.display = 'none';
+            }
+        }
+
+        function startCountdown(startNumber) {
+            const numberAnimation = document.getElementById('numberAnimation');
+            let currentNumber = startNumber;
+            
+            // Clear any existing interval
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            countdownInterval = setInterval(function() {
+                if (currentNumber > 1) {
+                    currentNumber--;
+                    numberAnimation.innerText = currentNumber;
+                } else {
+                    clearInterval(countdownInterval);
+                    showMaxWin();
+                }
+            }, 750);
+        }
+        
+        function showMaxWin() {
+            // Remove number animation
+            const numberAnimation = document.getElementById('numberAnimation');
+            numberAnimation.style.display = 'none';
+            
+            // Create MAXWIN text
+            const centerNumber = document.getElementById('centerNumber');
+            const maxwinElement = document.createElement('div');
+            maxwinElement.className = 'maxwin-animation';
+            maxwinElement.innerText = translations[currentLanguage].maxwin || 'MAXWIN';
+            centerNumber.appendChild(maxwinElement);
+            
+            // Show fireworks
+            const fireworksCanvas = document.getElementById('fireworks-canvas');
+            fireworksCanvas.style.opacity = '1';
+            
+            const firework = new Firework(fireworksCanvas);
+            firework.start();
+            
+            // Enable play button after animation
+            setTimeout(function() {
+                if (playButton) {
+                    playButton.disabled = false;
+                }
+            }, 3000);
+        }
+
+        function startGame() {
+            if (isGameStarted) return;
+            
+            isGameStarted = true;
+            playButton = document.getElementById('playButton');
+            if (playButton) {
+                playButton.disabled = true;
+            }
+            
+            const message = document.getElementById('message');
+            const numberAnimation = document.getElementById('numberAnimation');
+            
+            // Choose random number between 12 and 22
+            let randomNumber = Math.floor(Math.random() * (22 - 12 + 1)) + 12;
+
+            message.style.transition = 'opacity 0.5s';
+            message.style.opacity = 0;
+
+            let animationCount = 0;
+            numberAnimation.innerText = '...';
+
+            let interval = setInterval(function () {
+                animationCount++;
+                numberAnimation.innerText = Math.floor(Math.random() * (22 - 12 + 1)) + 12;
+
+                if (animationCount > 5) {
+                    clearInterval(interval);
+                    numberAnimation.innerText = randomNumber;
+                    
+                    // Start countdown after a short delay
+                    setTimeout(function() {
+                        startCountdown(randomNumber);
+                    }, 1000);
+                }
+            }, 100);
+
+            setTimeout(function () {
+                numberAnimation.style.opacity = 1;
+                setTimeout(function () {
+                    message.style.display = 'none';
+                }, 1000);
+            }, 500);
+        }
+
+        function resetGame() {
+            isGameStarted = false;
+            
+            // Remove maxwin animation if exists
+            const maxwinElement = document.querySelector('.maxwin-animation');
+            if (maxwinElement) {
+                maxwinElement.remove();
+            }
+            
+            // Reset number animation
+            const numberAnimation = document.getElementById('numberAnimation');
+            numberAnimation.style.display = '';
+            numberAnimation.innerText = '';
+            
+            // Reset message
+            const message = document.getElementById('message');
+            message.style.display = '';
+            message.style.opacity = 1;
+            
+            // Hide fireworks
+            const fireworksCanvas = document.getElementById('fireworks-canvas');
+            fireworksCanvas.style.opacity = '0';
+            
+            // Clear any active countdown
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+        }
+
+        function incrementRows() {
+            if (rowCount < 16) {
+                rowCount++;
+                document.getElementById('rowCount').innerText = rowCount;
+            }
+        }
+
+        function decrementRows() {
+            if (rowCount > 8) {
+                rowCount--;
+                document.getElementById('rowCount').innerText = rowCount;
+            }
+        }
+
+        function incrementDifficulty() {
+            if (difficulty === 'low') {
+                difficulty = 'medium';
+                document.getElementById('difficultyText').innerText = translations[currentLanguage].medium;
+            } else if (difficulty === 'medium') {
+                difficulty = 'extreme';
+                document.getElementById('difficultyText').innerText = translations[currentLanguage].extreme;
+            }
+        }
+
+        function decrementDifficulty() {
+            if (difficulty === 'extreme') {
+                difficulty = 'medium';
+                document.getElementById('difficultyText').innerText = translations[currentLanguage].medium;
+            } else if (difficulty === 'medium') {
+                difficulty = 'low';
+                document.getElementById('difficultyText').innerText = translations[currentLanguage].low;
+            }
+        }
+
+        // Initialize everything when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initStarsBackground();
+            setLanguage();
+            
+            // Reset game if play button is clicked again
+            document.getElementById('playButton').addEventListener('click', function() {
+                if (isGameStarted) {
+                    resetGame();
+                    setTimeout(startGame, 200);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

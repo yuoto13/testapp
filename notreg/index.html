@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Games Mini App</title>
+  <style>
+    /* Общие стили */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes moveBackground {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 100% 100%; }
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) rotate(45deg); }
+    }
+
+    @keyframes shine {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    @keyframes star-pulse {
+      0% { transform: translateY(-50%) scale(1); }
+      50% { transform: translateY(-50%) scale(1.2); }
+      100% { transform: translateY(-50%) scale(1); }
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+      position: fixed;
+    }
+
+    body {
+      background: #0f0f23;
+      color: white;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .background-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      background: linear-gradient(125deg, #1a1a3a 0%, #23235a 50%, #1f1f3f 100%);
+      opacity: 0.7;
+      animation: moveBackground 20s linear infinite;
+    }
+
+    .background-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 150vmax;
+      height: 150vmax;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      background: 
+        radial-gradient(circle at center, transparent 0%, #0f0f23 70%),
+        conic-gradient(from 0deg at 50% 50%, 
+          rgba(62, 84, 172, 0.1), 
+          rgba(114, 55, 172, 0.1), 
+          rgba(172, 55, 114, 0.1), 
+          rgba(62, 84, 172, 0.1));
+      animation: rotate 60s linear infinite;
+    }
+
+    .geometric-shapes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .geometric-shapes::before,
+    .geometric-shapes::after {
+      content: '';
+      position: absolute;
+      width: 40vmax;
+      height: 40vmax;
+      border-radius: 43% 57% 71% 29% / 43% 57% 43% 57%;
+      background: rgba(62, 84, 172, 0.1);
+      animation: rotate 30s infinite linear;
+    }
+
+    .geometric-shapes::before {
+      top: -20%;
+      right: -20%;
+      animation-direction: reverse;
+      background: rgba(114, 55, 172, 0.1);
+    }
+
+    .geometric-shapes::after {
+      bottom: -20%;
+      left: -20%;
+    }
+
+    .content-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 30px;
+      z-index: 2;
+    }
+
+    .header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      flex-direction: row;
+      padding-top: 40px;
+      padding-bottom: 40px;
+      z-index: 3;
+      position: relative;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: 2px;
+      background: linear-gradient(90deg, 
+        transparent,
+        rgba(255, 255, 255, 0.5),
+        transparent
+      );
+    }
+
+    .header img {
+      width: 50px;
+      height: 50px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+
+    .header img::after {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      right: -5px;
+      bottom: -5px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: linear-gradient(45deg, 
+        #ffffff 0%,
+        #7eb6ff 30%,
+        #ffffff 50%,
+        #7eb6ff 70%,
+        #ffffff 100%
+      );
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 3s linear infinite;
+      text-shadow: 0 0 30px rgba(126, 182, 255, 0.3);
+      position: relative;
+    }
+
+    .header h1::before {
+      content: '⭐️';
+      position: absolute;
+      right: -35px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 24px;
+      background: none;
+      -webkit-text-fill-color: initial;
+      animation: star-pulse 2s ease-in-out infinite;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 10px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .game-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 25px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .game-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 50% 50%, 
+        rgba(255, 255, 255, 0.1) 0%, 
+        transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .game-card:hover::before {
+      opacity: 1;
+    }
+
+    .game-icon-wrapper {
+      position: relative;
+      width: 80%;
+      aspect-ratio: 1;
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .game-icon-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        transparent 100%
+      );
+      z-index: 3;
+    }
+
+    .game-icon-wrapper::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+      );
+      transform: rotate(45deg);
+      animation: shimmer 3s linear infinite;
+      z-index: 2;
+    }
+
+    .game-icon {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 20px;
+      position: relative;
+      z-index: 1;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      filter: brightness(0.95) contrast(1.1);
+    }
+
+    .game-card:hover .game-icon-wrapper {
+      transform: scale(1.05) translateY(-5px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .game-card:hover .game-icon {
+      filter: brightness(1.1) contrast(1.2);
+    }
+
+    .game-title {
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 10px;
+      background: linear-gradient(45deg, #ffffff, #a5a5a5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    .game-title::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ffffff, transparent);
+      transform: translateX(-50%);
+      transition: width 0.3s ease;
+    }
+
+    .game-card:hover .game-title::after {
+      width: 100%;
+    }
+
+    .open-button {
+      background: linear-gradient(45deg, #4CAF50, #45a049);
+      color: white;
+      border: none;
+      padding: 12px 35px;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 14px;
+      width: 80%;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .open-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+      );
+      transition: transform 0.6s ease;
+    }
+
+    .open-button:hover::before {
+      transform: translateX(200%);
+    }
+
+    .open-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    }
+
+    .open-button:active {
+      transform: translateY(1px);
+    }
+
+    @media (max-width: 480px) {
+      .header h1 {
+        font-size: 24px;
+      }
+      
+      .header img {
+        width: 40px;
+        height: 40px;
+      }
+
+      .games-grid {
+        gap: 15px;
+        padding: 5px;
+      }
+
+      .game-card {
+        padding: 20px;
+      }
+
+      .game-title {
+        font-size: 16px;
+      }
+
+      .open-button {
+        padding: 10px 25px;
+        font-size: 12px;
+      }
+    }
+
+    /* Стили для модального окна */
+    .modal {
+      display: none; /* Скрыто по умолчанию */
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-content h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .modal-content p {
+      margin-bottom: 20px;
+      color: #555;
+      font-size: 16px;
+    }
+
+    .close-modal {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      position: absolute;
+      right: 10px;
+      top: 5px;
+      cursor: pointer;
+    }
+
+    .close-modal:hover,
+    .close-modal:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .modal-button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .modal-button:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="background-animation"></div>
+  <div class="background-overlay"></div>
+  <div class="geometric-shapes"></div>
+  
+  <div class="content-wrapper">
+    <div class="header">
+      <img src="logo.jpg" alt="Logo">
+      <h1>STAR AI SOFTWARE</h1>
+    </div>
+
+    <div class="games-grid">
+      <!-- Пример карточек игр -->
+      <div class="game-card">
+        <div class="game-icon-wrapper">
+          <img src="hotslot.jpg" alt="Hot Slot" class="game-icon">
+        </div>
+        <div class="game-title">Hot Slot</div>
+        <button class="open-button" data-href="games/hotslot/index.html">Open</button>
+      </div>
+      <div class="game-card">
+        <div class="game-icon-wrapper">
+          <img src="mines.png" alt="Mines 1win" class="game-icon">
+        </div>
+        <div class="game-title">Mines 1win</div>
+        <button class="open-button" data-href="games/mines/index.html">Open</button>
+      </div>
+      <div class="game-card">
+        <div class="game-icon-wrapper">
+          <img src="coinflip.png" alt="Coinflip" class="game-icon">
+        </div>
+        <div class="game-title">Coinflip</div>
+        <button class="open-button" data-href="games/Coinflip/index.html">Open</button>
+      </div>
+      <div class="game-card">
+        <div class="game-icon-wrapper">
+          <img src="bombucks.png" alt="Bombucks" class="game-icon">
+        </div>
+        <div class="game-title">Bombucks</div>
+        <button class="open-button" data-href="games/Bombucks/index.html">Open</button>
+      </div>
+      <div class="game-card">
+        <div class="game-icon-wrapper">
+          <img src="penafon.png" alt="Penalty" class="game-icon">
+        </div>
+        <div class="game-title">Penalty</div>
+        <button class="open-button" data-href="games/Penalty/index.html">Open</button>
+      </div>
+      <div class="game-card">
+        <div class="game-icon-wrapper">
+          <img src="plinko.jpg" alt="Plinko" class="game-icon">
+        </div>
+        <div class="game-title">Plinko</div>
+        <button class="open-button" data-href="games/Plinko/index.html">Open</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Registration and Deposit</h2>
+        <p>To receive signals, you need to register in the bot and make a deposit.<br>
+           After that, you will gain access to all the features of our service.</p>
+        <button class="modal-button" id="modalConfirm">Got it</button>
+    </div>
+</div>
+
+  <script>
+    // Обработчик клика по кнопкам "Open"
+    document.querySelectorAll('.open-button').forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Показываем модальное окно вместо перехода
+        document.getElementById('modal').style.display = 'block';
+      });
+    });
+
+    // Получаем элементы модального окна
+    var modal = document.getElementById('modal');
+    var closeBtn = document.querySelector('.close-modal');
+    var modalConfirm = document.getElementById('modalConfirm');
+
+    // Закрываем модальное окно при клике на кнопку закрытия или подтверждения
+    closeBtn.onclick = function() {
+      modal.style.display = 'none';
+    }
+    modalConfirm.onclick = function() {
+      modal.style.display = 'none';
+    }
+
+    // Закрываем модальное окно при клике вне его содержимого
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>

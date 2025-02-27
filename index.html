@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Games Mini App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            background: #000;
+            color: white;
+        }
+
+        /* Main background animation */
+        .space-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(125deg, #000 0%, #111 50%, #000 100%);
+            z-index: 0;
+        }
+
+        /* Stars */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(1px 1px at 25% 25%, white 1%, transparent 0),
+                radial-gradient(1px 1px at 50% 50%, white 1%, transparent 0),
+                radial-gradient(2px 2px at 75% 75%, white 1%, transparent 0),
+                radial-gradient(2px 2px at 10% 90%, white 1%, transparent 0),
+                radial-gradient(1px 1px at 85% 15%, white 1%, transparent 0);
+            background-size: 600px 600px;
+            opacity: 0.4;
+            z-index: 1;
+            animation: stars-move 120s linear infinite;
+        }
+
+        @keyframes stars-move {
+            0% { background-position: 0 0; }
+            100% { background-position: 600px 600px; }
+        }
+
+        /* Plasma effect */
+        .plasma {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            opacity: 0.5;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(100, 0, 255, 0.3), transparent 70%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 100, 255, 0.3), transparent 70%),
+                radial-gradient(circle at 50% 50%, rgba(255, 0, 100, 0.2), transparent 60%);
+            filter: blur(30px);
+            animation: plasma-pulse 15s ease-in-out infinite alternate;
+        }
+
+        @keyframes plasma-pulse {
+            0% { 
+                transform: scale(1); 
+                opacity: 0.5;
+            }
+            50% { 
+                transform: scale(1.1); 
+                opacity: 0.7;
+            }
+            100% { 
+                transform: scale(1); 
+                opacity: 0.5;
+            }
+        }
+
+        /* Floating objects */
+        .floating-object {
+            position: fixed;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, rgba(100, 0, 255, 0.1), rgba(0, 100, 255, 0.1));
+            filter: blur(5px);
+            z-index: 3;
+        }
+
+        .floating-object:nth-child(1) {
+            top: 20%;
+            left: 10%;
+            width: 150px;
+            height: 150px;
+            animation: float1 20s ease-in-out infinite;
+        }
+
+        .floating-object:nth-child(2) {
+            top: 60%;
+            left: 80%;
+            width: 200px;
+            height: 200px;
+            animation: float2 25s ease-in-out infinite;
+        }
+
+        .floating-object:nth-child(3) {
+            top: 70%;
+            left: 20%;
+            width: 120px;
+            height: 120px;
+            animation: float3 18s ease-in-out infinite;
+        }
+
+        @keyframes float1 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(50px, -30px) rotate(10deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        @keyframes float2 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-60px, 40px) rotate(-15deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        @keyframes float3 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(40px, 30px) rotate(5deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        /* Glow lines */
+        .glow-line {
+            position: fixed;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(100, 100, 255, 0.5) 50%, 
+                transparent 100%);
+            opacity: 0.3;
+            z-index: 3;
+            animation: glow-pulse 3s ease-in-out infinite;
+        }
+
+        .glow-line:nth-child(1) {
+            top: 25%;
+            left: 0;
+            width: 100%;
+        }
+
+        .glow-line:nth-child(2) {
+            top: 75%;
+            left: 0;
+            width: 100%;
+        }
+
+        @keyframes glow-pulse {
+            0% { opacity: 0.1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 0.1; }
+        }
+
+        /* Content wrapper */
+        .content-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            z-index: 10;
+            /* Moving content down for full screen in Telegram */
+            padding-top: 90px;
+            padding-bottom: 40px;
+        }
+
+        /* Logo area */
+        .logo-area {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 50px;
+            z-index: 15;
+        }
+
+        .logo-glow {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 0, 255, 0.4) 0%, transparent 70%);
+            filter: blur(20px);
+            z-index: -1;
+            animation: glow-pulse 5s ease-in-out infinite;
+        }
+
+        .logo-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 100%;
+            height: 100%;
+            border-radius: 30px;
+            object-fit: cover;
+            filter: brightness(1.2);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 255, 0.3);
+            animation: logo-pulse 5s ease-in-out infinite;
+        }
+
+        @keyframes logo-pulse {
+            0% { transform: translateY(0) scale(1); box-shadow: 0 10px 30px rgba(0, 0, 255, 0.3); }
+            50% { transform: translateY(-5px) scale(1.05); box-shadow: 0 15px 40px rgba(100, 0, 255, 0.4); }
+            100% { transform: translateY(0) scale(1); box-shadow: 0 10px 30px rgba(0, 0, 255, 0.3); }
+        }
+
+        .logo-ring {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 35px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            z-index: -1;
+            animation: logo-ring-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logo-ring-pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        .app-title {
+            font-size: 36px;
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative;
+            display: inline-block;
+            margin-bottom: 10px;
+            color: transparent;
+            background: linear-gradient(45deg, 
+                #7000ff 0%, 
+                #c800ff 25%, 
+                #0088ff 50%, 
+                #c800ff 75%, 
+                #7000ff 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            animation: title-gradient 5s linear infinite;
+            text-shadow: 0 5px 15px rgba(100, 0, 255, 0.3);
+        }
+
+        @keyframes title-gradient {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .app-subtitle {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        /* Games grid */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            padding: 0 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .game-card {
+            background: rgba(20, 20, 40, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            border: 1px solid rgba(100, 100, 255, 0.1);
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(100, 0, 255, 0.2) 0%, 
+                rgba(0, 100, 255, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.4s;
+            z-index: 0;
+        }
+
+        .game-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-border {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 25px;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .card-border::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                transparent,
+                rgba(100, 0, 255, 0.5),
+                rgba(0, 100, 255, 0.5),
+                rgba(100, 0, 255, 0.5),
+                transparent
+            );
+            animation: rotate-border 4s linear infinite;
+        }
+
+        @keyframes rotate-border {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .game-icon-wrapper {
+            position: relative;
+            width: 85%;
+            aspect-ratio: 1;
+            margin-bottom: 15px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+
+        .game-icon-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at center, 
+                rgba(100, 0, 255, 0.3) 0%,
+                transparent 70%);
+            z-index: 2;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .game-card:hover .game-icon-glow {
+            opacity: 1;
+        }
+
+        .game-icon {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            filter: brightness(0.8) contrast(1.1);
+            z-index: 1;
+        }
+
+        .game-card:hover .game-icon {
+            transform: scale(1.05);
+            filter: brightness(1.1) contrast(1.2);
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 10px 0;
+            background: linear-gradient(45deg, #ffffff, #a5a5ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-card:hover .game-title {
+            background: linear-gradient(45deg, #ffffff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .open-button {
+            background: linear-gradient(45deg, #5000ff, #00a5ff);
+            color: white;
+            border: none;
+            padding: 12px 0;
+            border-radius: 50px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 1px;
+            width: 85%;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            margin-top: 5px;
+        }
+
+        .open-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: transform 0.6s;
+        }
+
+        .game-card:hover .open-button::before {
+            transform: translateX(200%);
+        }
+
+        .game-card:hover .open-button {
+            background: linear-gradient(45deg, #6500ff, #00c8ff);
+            box-shadow: 0 5px 15px rgba(0, 100, 255, 0.4);
+        }
+
+        .open-button:active {
+            transform: scale(0.98);
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 480px) {
+            .app-title {
+                font-size: 28px;
+            }
+            
+            .app-subtitle {
+                font-size: 12px;
+            }
+            
+            .logo-container {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .games-grid {
+                gap: 15px;
+                padding: 0 15px;
+            }
+            
+            .game-card {
+                padding: 15px;
+            }
+            
+            .game-title {
+                font-size: 16px;
+            }
+            
+            .open-button {
+                padding: 10px 0;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background layers -->
+    <div class="space-background"></div>
+    <div class="stars"></div>
+    <div class="plasma"></div>
+
+    <!-- Floating objects -->
+    <div class="floating-object"></div>
+    <div class="floating-object"></div>
+    <div class="floating-object"></div>
+
+    <!-- Glow lines -->
+    <div class="glow-line"></div>
+    <div class="glow-line"></div>
+
+    <!-- Main content -->
+    <div class="content-wrapper">
+        <div class="logo-area">
+            <div class="logo-glow"></div>
+            <div class="logo-container">
+                <div class="logo-ring"></div>
+                <img src="logo.jpg" alt="Logo" class="logo">
+            </div>
+            <h1 class="app-title">STAR AI SOFTWARE</h1>
+            <div class="app-subtitle">premium games</div>
+        </div>
+
+        <div class="games-grid">
+            <div class="game-card">
+                <div class="card-border"></div>
+                <div class="game-icon-wrapper">
+                    <img src="crazytime.png" alt="CrazyTime" class="game-icon">
+                    <div class="game-icon-glow"></div>
+                </div>
+                <div class="game-title">CrazyTime</div>
+                <button class="open-button" data-href="games/crazytime/index.html">Play Now</button>
+            </div>
+            
+            <div class="game-card">
+                <div class="card-border"></div>
+                <div class="game-icon-wrapper">
+                    <img src="hotslot.jpg" alt="Hot Slot" class="game-icon">
+                    <div class="game-icon-glow"></div>
+                </div>
+                <div class="game-title">Hot Slot</div>
+                <button class="open-button" data-href="games/hotslot/index.html">Play Now</button>
+            </div>
+            
+            <div class="game-card">
+                <div class="card-border"></div>
+                <div class="game-icon-wrapper">
+                    <img src="mines.png" alt="Mines" class="game-icon">
+                    <div class="game-icon-glow"></div>
+                </div>
+                <div class="game-title">Mines 1win</div>
+                <button class="open-button" data-href="games/mines/index.html">Play Now</button>
+            </div>
+            
+            <div class="game-card">
+                <div class="card-border"></div>
+                <div class="game-icon-wrapper">
+                    <img src="coinflip.png" alt="Coinflip" class="game-icon">
+                    <div class="game-icon-glow"></div>
+                </div>
+                <div class="game-title">Coinflip</div>
+                <button class="open-button" data-href="games/Coinflip/index.html">Play Now</button>
+            </div>
+            
+            <div class="game-card">
+                <div class="card-border"></div>
+                <div class="game-icon-wrapper">
+                    <img src="bombucks.png" alt="Bombucks" class="game-icon">
+                    <div class="game-icon-glow"></div>
+                </div>
+                <div class="game-title">Bombucks</div>
+                <button class="open-button" data-href="games/Bombucks/index.html">Play Now</button>
+            </div>
+            
+            <div class="game-card">
+                <div class="card-border"></div>
+                <div class="game-icon-wrapper">
+                    <img src="penafon.png" alt="Penalty" class="game-icon">
+                    <div class="game-icon-glow"></div>
+                </div>
+                <div class="game-title">Penalty</div>
+                <button class="open-button" data-href="games/Penalty/index.html">Play Now</button>
+            </div>
+            
+            <div class="game-card">
+                <div class="card-border"></div>
+                <div class="game-icon-wrapper">
+                    <img src="plinko.jpg" alt="Plinko" class="game-icon">
+                    <div class="game-icon-glow"></div>
+                </div>
+                <div class="game-title">Plinko</div>
+                <button class="open-button" data-href="games/Plinko/index.html">Play Now</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.open-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const href = button.getAttribute('data-href');
+                if (href) {
+                    window.location.href = href;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

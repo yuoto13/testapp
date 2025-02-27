@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Slot Selector</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #0D1117;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 2rem;
+      touch-action: manipulation;
+      opacity: 0;
+      animation: fadeIn 1s forwards;
+      overflow: hidden;
+      position: relative;
+    }
+    /* Canvas для фона со звёздами */
+    #stars-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .header {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      opacity: 0;
+      animation: fadeInUp 1s 0.3s forwards;
+      z-index: 1;
+    }
+    @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .logo-img {
+      height: 2rem;
+      width: auto;
+      object-fit: contain;
+    }
+    .language-select {
+      background-color: #1D90F5;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background-color 0.3s;
+      margin-left: 5px;
+    }
+    .game-container {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      opacity: 0;
+      animation: fadeInUp 1s 0.6s forwards;
+      z-index: 1;
+      position: relative;
+    }
+    /* Обновлённые стили для отображения слота – увеличенная высота для добавления верхнего блока */
+    .slot-display {
+      width: 100%;
+      height: 300px;
+      background-color: rgba(26, 31, 37, 0.8);
+      border-radius: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 2rem 0;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(29, 144, 245, 0.3);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.5s ease;
+    }
+    /* Эффект свечения и пульсации при анимации выбора */
+    .slot-display.selecting {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 25px rgba(29, 144, 245, 0.7);
+      animation: pulsate 1.5s infinite;
+    }
+    @keyframes pulsate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    .slot-reflection {
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0) 20%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                rgba(255, 255, 255, 0) 80%, 
+                transparent 100%);
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0;
+    }
+    @keyframes reflect {
+      0% { left: -100%; opacity: 0.5; }
+      100% { left: 100%; opacity: 0; }
+    }
+    .slot-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 2px solid transparent;
+      border-radius: 1rem;
+      box-shadow: inset 0 0 15px rgba(29, 144, 245, 0.2);
+      background: linear-gradient(180deg, 
+                rgba(29, 144, 245, 0.3) 0%, 
+                rgba(29, 144, 245, 0.1) 15%, 
+                rgba(29, 144, 245, 0) 40%, 
+                rgba(29, 144, 245, 0) 60%, 
+                rgba(29, 144, 245, 0.1) 85%, 
+                rgba(29, 144, 245, 0.3) 100%);
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.8s;
+    }
+    .slot-frame.show {
+      opacity: 1;
+    }
+    /* Центрирование изображения в контейнере */
+    .slot-image-container {
+      position: relative;
+      width: 80%;
+      height: 80%;
+      overflow: hidden;
+      border-radius: 0.75rem;
+      perspective: 1000px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .slot-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transform: scale(0.8) rotateY(90deg);
+      transition: transform 0.5s ease-out, opacity 0.4s ease-out;
+      border-radius: 0.75rem;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+    }
+    .slot-image.show {
+      opacity: 1;
+      transform: scale(1) rotateY(0deg);
+    }
+    /* Анимация смены слотов */
+    @keyframes slotMachine {
+      0%, 100% { transform: translateY(0); }
+      20% { transform: translateY(-20px); }
+      40% { transform: translateY(-40px); }
+      60% { transform: translateY(-20px); }
+      80% { transform: translateY(-10px); }
+    }
+    /* Новый верхний блок с названием слота и бонусами */
+    .slot-header {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      z-index: 3;
+    }
+    .bonus-info {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .bonus-bay {
+      font-size: 0.9rem;
+    }
+    .profit {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+    /* Оверлей, который выводит «find a slot» во время рандома */
+    .slot-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 2;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(29, 144, 245, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(29, 144, 245, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(29, 144, 245, 0); }
+    }
+    .slot-button {
+      width: 100%;
+      background-color: #1D90F5;
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      animation: pulse 2s infinite;
+      position: relative;
+      overflow: hidden;
+    }
+    .slot-button:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                transparent 100%);
+      transition: all 0.3s;
+    }
+    .slot-button:hover:after {
+      left: 100%;
+    }
+    .slot-button:active {
+      transform: scale(0.98);
+    }
+    .slot-link {
+      width: 100%;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: none;
+      position: relative;
+      overflow: hidden;
+      animation: bounceIn 0.6s;
+    }
+    @keyframes bounceIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.1); }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .slot-link:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                transparent 100%);
+      transition: all 0.3s;
+    }
+    .slot-link:hover:after {
+      left: 100%;
+    }
+    .slot-link:hover {
+      background-color: #218838;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .back-button {
+      width: 100%;
+      background: linear-gradient(93.73deg, #e75410, #c40e08);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      height: 42px;
+      cursor: pointer;
+      margin-top: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .back-button:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                transparent 100%);
+      transition: all 0.3s;
+    }
+    .back-button:hover:after {
+      left: 100%;
+    }
+    .back-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .controls {
+      background-color: rgba(26, 31, 37, 0.8);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      width: 100%;
+      margin-top: 1rem;
+      opacity: 0;
+      animation: fadeInUp 1s 0.9s forwards;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+    @keyframes spinIn {
+      0% { transform: translateX(-50%) rotate(720deg) scale(0); opacity: 0; }
+      100% { transform: translateX(-50%) rotate(0deg) scale(1); opacity: 1; }
+    }
+    @media (max-width: 480px) {
+      .game-container {
+        padding: 0.5rem;
+      }
+      .controls {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars-canvas"></canvas>
+  <div class="header">
+    <!-- Логотип – замените путь на ваш -->
+    <img src="logo.svg" alt="1Win" class="logo-img" id="logo">
+    <select class="language-select" id="languageSelect">
+      <option value="en">EN</option>
+      <option value="ru">RU</option>
+      <option value="hi">HI</option>
+      <option value="es">ES</option>
+      <option value="pt">PT</option>
+      <option value="br">BR</option>
+      <option value="tr">TR</option>
+      <option value="uz">UZ</option>
+      <option value="fr">FR</option>
+      <option value="ar">AR</option>
+    </select>
+  </div>
+  <div class="game-container">
+    <div class="slot-display" id="slotDisplay">
+      <!-- Новый верхний блок: слева – название слота, справа – бонусы -->
+      <div class="slot-header">
+        <div class="slot-name" id="slotName"></div>
+        <div class="bonus-info">
+          <div class="bonus-bay" id="bonusBay"></div>
+          <div class="profit" id="profit"></div>
+        </div>
+      </div>
+      <div class="slot-frame"></div>
+      <div class="slot-reflection"></div>
+      <div class="slot-image-container">
+        <!-- Изображение слота (иконка) теперь всегда по центру -->
+        <img id="slotImage" class="slot-image" src="" alt="Random slot game">
+        <!-- Оверлей с надписью «find a slot» -->
+        <div class="slot-overlay" id="slotOverlay" data-translate="findSlot"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="slot-button" id="findSlotButton" data-translate="findSlot">Find a Slot</button>
+      <!-- Ссылка на игру, появляется после выбора слота -->
+      <a class="slot-link" id="slotLink" data-translate="playNow" href="#" target="_blank">Play Now</a>
+      <button id="backButton" class="back-button" type="button" onclick="window.history.back()" data-translate="back">Back</button>
+    </div>
+  </div>
+  <script>
+    // Данные о слотах – замените на ваши реальные слоты
+    const slotGames = [
+      {
+        id: 1,
+        name: "1 win bonanza",
+        image: "slot/1winbonanza.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20bnnz1win"
+      },
+      {
+        id: 2,
+        name: "Big Bass Amazon Xtreme",
+        image: "slot/BigBassAmazonXtreme.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs10bbextreme"
+      },
+      {
+        id: 3,
+        name: "Big Bass Floats my Boat",
+        image: "slot/BigBassFloatsmyBoat.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs10bbfloats"
+      },
+      {
+        id: 4,
+        name: "Big Bass Mission Fishin",
+        image: "slot/BigBassMissionFishin.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs10bbfmission"
+      },
+      {
+        id: 5,
+        name: "Buffalo King Megaways",
+        image: "slot/BuffaloKingMegaways.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vswaysbufking"
+      },
+      {
+        id: 6,
+        name: "Cleocatra",
+        image: "slot/Cleocatra.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20cleocatra"
+      },
+      {
+        id: 7,
+        name: "Fruit Party",
+        image: "slot/FruitParty.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20fruitparty"
+      },
+      {
+        id: 8,
+        name: "Gates 1win",
+        image: "slot/gates1win.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20gates1win"
+      },
+      {
+        id: 9,
+        name: "Immortal Ways Cleopatra",
+        image: "slot/ImmortalWaysCleopatra.png",
+        link: "https://1wtxpx.top/casino/play/softswiss_rubyplay:ImmortalWaysCleopatra"
+      },
+      {
+        id: 10,
+        name: "`Kraken Megaweys",
+        image: "slot/krakenmegaweys.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vswayskrakenmw"
+      },
+      {
+        id: 11,
+        name: "Lucky LadyMoon Megaway",
+        image: "slot/LuckyLadyMoonMegaway.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20bnnz1win"
+      },
+      {
+        id: 12,
+        name: "Madame Destiny Megaways",
+        image: "slot/MadameDestinyMegaways.png",
+        link: "https://1wtxpx.top/casino/play/softswiss_softswiss:LuckyLadyMoonMegaways"
+      },
+      {
+        id: 13,
+        name: "Mummy land Treasures",
+        image: "slot/MummylandTreasures.png",
+        link: "https://1wtxpx.top/casino/play/softswiss_belatra:MummylandTreasures"
+      },
+      {
+        id: 14,
+        name: "Relax Money Train3",
+        image: "slot/relaxmoneytrain3.png",
+        link: "https://1wtxpx.top/casino/play/relax_moneytrain3"
+      },
+      {
+        id: 15,
+        name: "Santa Mummy",
+        image: "slot/SantaMummy.png",
+        link: "https://1wtxpx.top/casino/play/softswiss_belatra:SantaMummy"
+      },
+      {
+        id: 16,
+        name: "Sugar Rush",
+        image: "slot/sugarrush.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20sugarrush"
+      },
+      {
+        id: 17,
+        name: "Sugar Rush 1000",
+        image: "slot/sugarrush1000.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20sugarrushx"
+      },
+      {
+        id: 18,
+        name: "Sugar rush Xmas",
+        image: "slot/sugarrushxrms.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20sugrux"
+      },
+      {
+        id: 19,
+        name: "Sugar Supreme",
+        image: "games/hotslot/slot/sugarsupreme.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs20sugarnudge"
+      },
+      {
+        id: 20,
+        name: "Wild West Gold",
+        image: "slot/wildwestgold.png",
+        link: "https://1wtxpx.top/casino/play/pragmatic_vs40wildwest"
+      },
+      {
+        id: 21,
+        name: "Wild West Trueways",
+        image: "slot/WildWestTrueways.png",
+        link: "https://1wtxpx.top/casino/play/softswiss_softswiss:WildWestTrueways"
+      }
+    ];
+
+    // Заглушки изображений, если реальные не доступны
+    const placeholderImages = [
+      "https://via.placeholder.com/300x150/1D90F5/FFFFFF?text=Fortune+Tiger",
+      "https://via.placeholder.com/300x150/E75410/FFFFFF?text=Sweet+Bonanza",
+      "https://via.placeholder.com/300x150/28a745/FFFFFF?text=Gates+of+Olympus",
+      "https://via.placeholder.com/300x150/6f42c1/FFFFFF?text=Book+of+Dead",
+      "https://via.placeholder.com/300x150/fd7e14/FFFFFF?text=Fruit+Party"
+    ];
+
+    const translations = {
+      en: {
+        findSlot: "Find a Slot",
+        playNow: "Game here",
+        back: "Back"
+      },
+      ru: {
+        findSlot: "Подобрать слот",
+        playNow: "Играть сейчас",
+        back: "Назад"
+      },
+      hi: {
+        findSlot: "स्लॉट खोजें",
+        playNow: "अभी खेलें",
+        back: "वापस"
+      },
+      es: {
+        findSlot: "Encontrar tragamonedas",
+        playNow: "Jugar ahora",
+        back: "Atrás"
+      },
+      pt: {
+        findSlot: "Encontrar caça-níquel",
+        playNow: "Jogar agora",
+        back: "Voltar"
+      },
+      br: {
+        findSlot: "Encontrar caça-níquel",
+        playNow: "Jogar agora",
+        back: "Voltar"
+      },
+      tr: {
+        findSlot: "Slot bul",
+        playNow: "Şimdi oyna",
+        back: "Geri"
+      },
+      uz: {
+        findSlot: "Slot tanlash",
+        playNow: "Hozir o'ynash",
+        back: "Orqaga"
+      },
+      fr: {
+        findSlot: "Trouver une machine à sous",
+        playNow: "Jouer maintenant",
+        back: "Retour"
+      },
+      ar: {
+        findSlot: "ابحث عن ماكينة قمار",
+        playNow: "العب الآن",
+        back: "رجوع"
+      }
+    };
+
+    // Маппинг валют для разных языков
+    const currencyMap = {
+      en: "USD",
+      ru: "₽",
+      hi: "INR",
+      es: "EUR",
+      pt: "EUR",
+      br: "BRL",
+      tr: "TRY",
+      uz: "UZS",
+      fr: "EUR",
+      ar: "AED"
+    };
+
+    let currentLanguage = 'en';
+    let currentSlot = null;
+    let isSelecting = false;
+
+    // Функция для получения случайного бонуса (кратно 50 от 600 до 3000)
+    function getRandomBonus() {
+      const minMultiplier = 12; // 600/50
+      const maxMultiplier = 60; // 3000/50
+      const multiplier = Math.floor(Math.random() * (maxMultiplier - minMultiplier + 1)) + minMultiplier;
+      return multiplier * 50;
+    }
+
+    // Анимация фона со звёздами
+    function initStarsBackground() {
+      const canvas = document.getElementById('stars-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const stars = [];
+      const numStars = 100;
+      const maxSize = 2;
+      for (let i = 0; i < numStars; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * maxSize,
+          speed: 0.1 + Math.random() * 0.3,
+          brightness: 0.2 + Math.random() * 0.8
+        });
+      }
+      function animateStars() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < stars.length; i++) {
+          const star = stars[i];
+          const brightness = star.brightness * (0.5 + Math.sin(Date.now() * 0.001 * star.speed) * 0.5);
+          ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+          ctx.fill();
+          star.y += star.speed;
+          if (star.y > canvas.height) {
+            star.y = 0;
+            star.x = Math.random() * canvas.width;
+          }
+        }
+        requestAnimationFrame(animateStars);
+      }
+      animateStars();
+      window.addEventListener('resize', function() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+    }
+
+    function setLanguage() {
+      const languageSelect = document.getElementById('languageSelect');
+      currentLanguage = languageSelect.value;
+      languageSelect.addEventListener('change', function () {
+        currentLanguage = languageSelect.value;
+        updateLanguage();
+      });
+      updateLanguage();
+    }
+
+    function updateLanguage() {
+      const elementsToUpdate = document.querySelectorAll('[data-translate]');
+      elementsToUpdate.forEach(element => {
+        const key = element.getAttribute('data-translate');
+        if (translations[currentLanguage] && translations[currentLanguage][key]) {
+          element.innerText = translations[currentLanguage][key];
+        }
+      });
+    }
+
+    // Анимация поиска слота
+    function findRandomSlot() {
+      if (isSelecting) return;
+      isSelecting = true;
+      const slotDisplay = document.getElementById('slotDisplay');
+      const slotImage = document.getElementById('slotImage');
+      const slotFrame = document.querySelector('.slot-frame');
+      const slotReflection = document.querySelector('.slot-reflection');
+      const slotLink = document.getElementById('slotLink');
+      const slotName = document.getElementById('slotName');
+      const findSlotButton = document.getElementById('findSlotButton');
+      const slotOverlay = document.getElementById('slotOverlay');
+
+      // Показываем оверлей с надписью «find a slot»
+      slotOverlay.style.display = 'flex';
+
+      // Блокируем кнопку на время анимации
+      findSlotButton.disabled = true;
+      // Скрываем текущее изображение, рамку и бонусную информацию
+      slotImage.classList.remove('show');
+      slotFrame.classList.remove('show');
+      slotLink.style.display = 'none';
+      slotName.textContent = "";
+      document.getElementById('bonusBay').textContent = "";
+      document.getElementById('profit').textContent = "";
+
+      // Добавляем класс для анимации выбора
+      slotDisplay.classList.add('selecting');
+
+      let counter = 0;
+      const slots = [...slotGames];
+      const switchImages = () => {
+        if (counter < 10) {
+          const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+          slotImage.src = randomSlot.image;
+          slotImage.style.animation = 'slotMachine 0.2s';
+          setTimeout(() => {
+            slotImage.style.animation = 'none';
+          }, 190);
+          counter++;
+          setTimeout(switchImages, 200);
+        } else {
+          selectFinalSlot();
+        }
+      };
+      setTimeout(switchImages, 300);
+      slotReflection.style.animation = 'reflect 1.5s 2';
+      
+      const selectFinalSlot = () => {
+        const randomIndex = Math.floor(Math.random() * slotGames.length);
+        currentSlot = slotGames[randomIndex];
+        const img = new Image();
+        img.onload = function() {
+          slotImage.src = currentSlot.image;
+          showFinalSlot();
+        };
+        img.onerror = function() {
+          slotImage.src = placeholderImages[randomIndex];
+          showFinalSlot();
+        };
+        img.src = currentSlot.image;
+        slotLink.href = currentSlot.link;
+        // Устанавливаем название слота
+        slotName.textContent = currentSlot.name;
+        // Генерируем бонус (Bonus bay) и рассчитываем profit
+        const bonus = getRandomBonus();
+        const profitValue = bonus * 3;
+        document.getElementById('bonusBay').innerText = `Bonus bay: ${bonus} ${currencyMap[currentLanguage]}`;
+        document.getElementById('profit').innerText = `Profit: ${profitValue} ${currencyMap[currentLanguage]}`;
+      };
+
+      const showFinalSlot = () => {
+        slotDisplay.classList.remove('selecting');
+        slotImage.classList.add('show');
+        setTimeout(() => {
+          slotFrame.classList.add('show');
+        }, 200);
+        // Скрываем оверлей с «find a slot»
+        slotOverlay.style.display = 'none';
+        setTimeout(() => {
+          slotLink.style.display = 'block';
+          findSlotButton.disabled = false;
+          isSelecting = false;
+        }, 600);
+      };
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initStarsBackground();
+      setLanguage();
+      document.getElementById('findSlotButton').addEventListener('click', findRandomSlot);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pathfinder Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #0D1117;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 2rem;
+      touch-action: manipulation;
+      opacity: 0;
+      animation: fadeIn 1s forwards;
+      overflow: auto;
+      position: relative;
+    }
+    /* Canvas для фона со звездами */
+    #stars-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .header {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      opacity: 0;
+      animation: fadeInUp 1s 0.3s forwards;
+      z-index: 1;
+    }
+    @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .logo-img {
+      height: 2rem;
+      width: auto;
+      object-fit: contain;
+    }
+    .switch-button {
+      background-color: #1D90F5;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background-color 0.3s;
+      margin-left: 5px;
+      position: relative;
+      overflow: hidden;
+    }
+    .switch-button:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+      transition: all 0.3s;
+    }
+    .switch-button:hover:after {
+      left: 100%;
+    }
+    .game-container {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      opacity: 0;
+      animation: fadeInUp 1s 0.6s forwards;
+      z-index: 1;
+      position: relative;
+    }
+    .size-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      animation: fadeInUp 1s 0.6s forwards;
+    }
+    .size-button {
+      background-color: #1A1F25;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .size-button:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+      transition: all 0.3s;
+    }
+    .size-button:hover:after {
+      left: 100%;
+    }
+    .size-button.active {
+      background-color: #1D90F5;
+      animation: pulse 2s infinite;
+    }
+    .game-grid {
+      display: grid;
+      gap: 8px;
+      background-color: rgba(26, 31, 37, 0.8);
+      padding: 16px;
+      border-radius: 16px;
+      width: fit-content;
+      margin: 0 auto;
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      animation: fadeInUp 1s 0.9s forwards;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      cursor: default;
+      transition: all 0.3s ease;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      overflow: hidden;
+      background: #1A1F25;
+      transform: scale(0);
+    }
+    @keyframes scaleIn {
+      0% { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
+    .cell.correct {
+      background-color: #4CAF50;
+      box-shadow: 0 0 10px 5px rgba(76, 175, 80, 0.8);
+      animation: glow 1.5s infinite ease-in-out;
+    }
+    @keyframes glow {
+      0% { box-shadow: 0 0 10px 5px rgba(76, 175, 80, 0.5); }
+      50% { box-shadow: 0 0 20px 10px rgba(76, 175, 80, 1); }
+      100% { box-shadow: 0 0 10px 5px rgba(76, 175, 80, 0.5); }
+    }
+    /* Анимация thinking для имитации работы AI */
+    @keyframes thinking {
+      0% { transform: scale(1); background-color: #1A1F25; }
+      20% { transform: scale(1.05); background-color: #1D90F5; }
+      40% { transform: scale(1); background-color: #1A1F25; }
+      60% { transform: scale(1.05); background-color: #1D90F5; }
+      80% { transform: scale(1); background-color: #1A1F25; }
+      100% { transform: scale(1.05); background-color: #1D90F5; }
+    }
+    .cell.thinking {
+      animation: thinking 2s ease-in-out;
+    }
+    .controls {
+      background-color: rgba(26, 31, 37, 0.8);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      margin-top: 20px;
+      opacity: 0;
+      animation: fadeInUp 1s 1.2s forwards;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+    .play-button {
+      width: 100%;
+      background-color: #1D90F5;
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      animation: pulse 2s infinite;
+      position: relative;
+      overflow: hidden;
+    }
+    .play-button:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+      transition: all 0.3s;
+    }
+    .play-button:hover:after {
+      left: 100%;
+    }
+    .play-button:active {
+      transform: scale(0.98);
+    }
+
+    .back-button {
+            width: 100%;
+            background: linear-gradient(93.73deg, #e75410, #c40e08);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            height: 42px;
+            cursor: pointer;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+    .back-button:after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                transparent 100%);
+            transition: all 0.3s;
+        }
+
+    .back-button:hover:after {
+            left: 100%;
+        }
+
+    .back-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(29, 144, 245, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(29, 144, 245, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(29, 144, 245, 0); }
+    }
+    @media (max-width: 480px) {
+      .game-container {
+        padding: 0.5rem;
+      }
+      .controls {
+        padding: 1rem;
+      }
+    }
+
+    /* Новая анимация появления ячеек сверху вниз */
+    @keyframes appearFromTop {
+      0% { 
+        transform: translateY(-50px) scale(0); 
+        opacity: 0;
+      }
+      100% { 
+        transform: translateY(0) scale(1); 
+        opacity: 1;
+      }
+    }
+
+    /* Новая анимация сканирования */
+    .scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, 
+        rgba(29, 144, 245, 0) 0%,
+        rgba(29, 144, 245, 1) 50%,
+        rgba(29, 144, 245, 0) 100%
+      );
+      box-shadow: 0 0 15px 3px rgba(29, 144, 245, 0.7);
+      z-index: 10;
+      opacity: 0;
+      display: none;
+    }
+
+    .cell.scanning {
+      background-color: rgba(29, 144, 245, 0.3);
+      box-shadow: 0 0 8px 2px rgba(29, 144, 245, 0.5);
+      transition: all 0.2s ease;
+    }
+
+    .cell.scanned {
+      background-color: rgba(29, 144, 245, 0.1);
+      box-shadow: none;
+      transition: all 0.5s ease;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars-canvas"></canvas>
+
+  <div class="header">
+    <img src="images/logo.svg" alt="1Win" class="logo-img" id="logo">
+    <!-- Если нужно, можно здесь также заменить действие кнопки -->
+    <button class="switch-button" onclick="window.location.href='https://1wtxpx.top/casino/play/1play_1play_bombucks'">🎰GAME HERE🎰</button>
+  </div>
+
+  <div class="game-container">
+    <div class="size-selector">
+      <button class="size-button active" data-size="3x2">2x3</button>
+      <button class="size-button" data-size="6x3">3x6</button>
+      <button class="size-button" data-size="9x4">4x9</button>
+      <button class="size-button" data-size="12x5">5x12</button>
+      <button class="size-button" data-size="15x6">6x15</button>
+    </div>
+
+    <div class="game-grid" id="gameGrid">
+      <!-- Ячейки генерируются JavaScript -->
+      <div class="scan-line" id="scanLine"></div>
+    </div>
+
+    <div class="controls">
+      <button class="play-button" onclick="startGame()">Play</button>
+      <!-- Обновлённая кнопка Back согласно предоставленному варианту -->
+      <div class="basis-1/3 pl-2 mobile:pl-0 mobile:basis-auto mobile:h-[3.25rem] mt-3">
+        <button id="backButton" type="button" class="back-button" onclick="window.history.back()">
+            Back
+          </button>
+          
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const IMAGES = {
+      logo: 'images/logo.svg'
+    };
+
+    let gridSize = '3x2';   // 3 строки x 2 столбца
+    let gridRows = 3;
+    let gridCols = 2;
+    let correctPath = [];
+    let isGameStarted = false;
+    let isThinking = false;
+    let isScanning = false;
+
+    // Установка логотипа
+    document.getElementById('logo').src = IMAGES.logo;
+
+    // Инициализация фона со звёздами
+    function initStarsBackground() {
+      const canvas = document.getElementById('stars-canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      const stars = [];
+      const numStars = 100;
+      const maxSize = 2;
+      
+      for (let i = 0; i < numStars; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * maxSize,
+          speed: 0.1 + Math.random() * 0.3,
+          brightness: 0.2 + Math.random() * 0.8
+        });
+      }
+      
+      function animateStars() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < stars.length; i++) {
+          const star = stars[i];
+          const brightness = star.brightness * (0.5 + Math.sin(Date.now() * 0.001 * star.speed) * 0.5);
+          ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+          ctx.fill();
+          star.y += star.speed;
+          if (star.y > canvas.height) {
+            star.y = 0;
+            star.x = Math.random() * canvas.width;
+          }
+        }
+        requestAnimationFrame(animateStars);
+      }
+      animateStars();
+      window.addEventListener('resize', function() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+    }
+
+    // Генерация игрового поля
+    function generateGrid(rows, cols) {
+      const grid = document.getElementById('gameGrid');
+      grid.innerHTML = '';
+      grid.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+      grid.style.gridTemplateRows = `repeat(${rows}, 40px)`;
+      
+      // Добавляем линию сканирования
+      const scanLine = document.createElement('div');
+      scanLine.id = 'scanLine';
+      scanLine.className = 'scan-line';
+      grid.appendChild(scanLine);
+      
+      for (let i = 0; i < rows * cols; i++) {
+        const cell = document.createElement('button');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        grid.appendChild(cell);
+      }
+    }
+
+    // Анимация появления ячеек сверху вниз
+    function animateCellsAppearance() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach((cell, index) => {
+        const delay = Math.floor(index / gridCols) * 100; // Задержка зависит от номера строки
+        cell.style.animation = `appearFromTop 0.5s ease-out ${delay}ms forwards`;
+      });
+    }
+
+    // Генерация случайного пути
+    function generateRandomPath(rows, cols) {
+      const path = [];
+      for (let row = rows - 1; row >= 0; row--) {
+        const col = Math.floor(Math.random() * cols);
+        path.push({ row, col });
+      }
+      return path;
+    }
+
+    // Новая анимация сканирования поля
+    function animateScanning() {
+      if (isScanning) return;
+      isScanning = true;
+      
+      const grid = document.getElementById('gameGrid');
+      const gridHeight = grid.offsetHeight;
+      const scanLine = document.getElementById('scanLine');
+      
+      // Показываем и настраиваем линию сканирования
+      scanLine.style.display = 'block';
+      scanLine.style.opacity = '1';
+      scanLine.style.top = '0px';
+      
+      const cells = document.querySelectorAll('.cell');
+      let currentRow = 0;
+      
+      function scanNextRow() {
+        if (currentRow >= gridRows) {
+          // Завершаем сканирование
+          scanLine.style.opacity = '0';
+          setTimeout(() => {
+            scanLine.style.display = 'none';
+            isScanning = false;
+            
+            // После сканирования запускаем "думание" AI
+            setTimeout(() => {
+              animateThinking();
+            }, 500);
+          }, 300);
+          return;
+        }
+        
+        // Устанавливаем позицию линии сканирования
+        const rowHeight = gridHeight / gridRows;
+        const topPosition = currentRow * rowHeight;
+        scanLine.style.top = `${topPosition}px`;
+        
+        // Подсвечиваем ячейки текущего ряда
+        for (let col = 0; col < gridCols; col++) {
+          const index = currentRow * gridCols + col;
+          if (index < cells.length) {
+            cells[index].classList.add('scanning');
+            
+            // Убираем подсветку через небольшую задержку и добавляем класс "сканировано"
+            setTimeout(() => {
+              cells[index].classList.remove('scanning');
+              cells[index].classList.add('scanned');
+            }, 300);
+          }
+        }
+        
+        currentRow++;
+        setTimeout(scanNextRow, 400); // Задержка перехода к следующему ряду
+      }
+      
+      // Запускаем сканирование
+      scanNextRow();
+    }
+
+    // Анимация "думающего" AI, после которой показывается правильный путь
+    function animateThinking() {
+      if (isThinking) return;
+      isThinking = true;
+      const cells = document.querySelectorAll('.cell');
+      const totalCells = cells.length;
+      cells.forEach(cell => {
+        cell.classList.remove('correct');
+        cell.classList.remove('scanned'); // Убираем класс сканирования
+      });
+      
+      const numCellsToAnimate = Math.min(5, Math.floor(totalCells / 2));
+      const randomIndices = [];
+      while (randomIndices.length < numCellsToAnimate) {
+        const index = Math.floor(Math.random() * totalCells);
+        if (!randomIndices.includes(index)) {
+          randomIndices.push(index);
+        }
+      }
+      randomIndices.forEach(index => {
+        cells[index].classList.add('thinking');
+        setTimeout(() => {
+          cells[index].classList.remove('thinking');
+        }, 1800);
+      });
+      setTimeout(() => {
+        isThinking = false;
+        showCorrectPath();
+      }, 2000);
+    }
+
+    // Показ правильного пути
+    function showCorrectPath() {
+      const cells = document.querySelectorAll('.cell');
+      correctPath.forEach(({ row, col }, index) => {
+        const cellIndex = row * gridCols + col;
+        setTimeout(() => {
+          cells[cellIndex].classList.add('correct');
+        }, index * 200);
+      });
+    }
+
+    // Обновленная функция startGame с новой анимацией сканирования
+    function startGame() {
+      if (isThinking || isScanning) return;
+      isGameStarted = true;
+      correctPath = generateRandomPath(gridRows, gridCols);
+      generateGrid(gridRows, gridCols);
+      
+      // Сначала анимируем появление клеток
+      animateCellsAppearance();
+      
+      // Затем запускаем анимацию сканирования
+      setTimeout(() => {
+        animateScanning();
+      }, gridRows * 100 + 300);
+    }
+
+    function resetGame() {
+      isGameStarted = false;
+      correctPath = [];
+      generateGrid(gridRows, gridCols);
+      animateCellsAppearance(); // Анимируем появление даже при сбросе
+    }
+
+    const sizeButtons = document.querySelectorAll('.size-button');
+    sizeButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        if (isThinking || isScanning) return;
+        sizeButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        gridSize = button.dataset.size;
+        const [rows, cols] = gridSize.split('x').map(Number);
+        gridRows = rows;
+        gridCols = cols;
+        resetGame();
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initStarsBackground();
+      const defaultButton = document.querySelector('.size-button[data-size="3x2"]');
+      defaultButton.classList.add('active');
+      generateGrid(gridRows, gridCols);
+      animateCellsAppearance(); // Анимируем появление при первой загрузке
+    });
+  </script>
+</body>
+</html>
